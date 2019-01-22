@@ -4,14 +4,6 @@ def create_model(opt):
     if opt.model == 'kdeep':
         from .kdeep_model import KDeepModel
         model = KDeepModel()
-    elif opt.model == 'pix2pix':
-        assert(opt.dataset_mode == 'aligned')
-        from .pix2pix_model import Pix2PixModel
-        model = Pix2PixModel()
-    elif opt.model == 'test':
-        assert(opt.dataset_mode == 'single')
-        from .test_model import TestModel
-        model = TestModel()
     else:
         raise ValueError("Model [%s] not recognized." % opt.model)
     model.initialize(opt)

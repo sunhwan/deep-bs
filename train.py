@@ -2,6 +2,7 @@ import time
 from options.train_options import TrainOptions
 from data.data_loader import CreateDataLoader
 from models.models import create_model
+from tqdm import tqdm
 
 opt = TrainOptions().parse()
 data_loader = CreateDataLoader(opt)
@@ -17,28 +18,32 @@ for epoch in range(opt.epoch_count, opt.niter + opt.niter_decay + 1):
     iter_data_time = time.time()
     epoch_iter = 0
 
-    for i, data in enumerate(dataset):
-        iter_start_time = time.time()
-        if total_steps % opt.print_freq == 0:
-            t_data = iter_start_time - iter_data_time
-        total_steps += opt.batch_size
-        epoch_iter += opt.batch_size
-        model.set_input(data)
-        model.optimize_parameters()
+    with tqdm(total=int(dataset_size/opt.batch_size)+1) as pbar:
+        for i, data in enumerate(dataset):
+            iter_start_time = time.time()
+            if total_steps % opt.print_freq == 0:
+                t_data = iter_start_time - iter_data_time
+            total_steps += opt.batch_size
+            epoch_iter += opt.batch_size
+            model.set_input(data)
+            model.optimize_parameters()
 
-        if total_steps % opt.display_freq == 0:
-            save_result = total_steps % opt.update_html_freq == 0
+            if total_steps % opt.display_freq == 0:
+                save_result = total_steps % opt.update_html_freq == 0
 
-        if total_steps % opt.print_freq == 0:
-            errors = model.get_current_errors()
-            t = (time.time() - iter_start_time) / opt.batch_size
+            if total_steps % opt.print_freq == 0:
+                errors = model.get_current_errors()
+                t = (time.time() - iter_start_time) / opt.batch_size
 
-        if total_steps % opt.save_latest_freq == 0:
-            print('saving the latest model (epoch %d, total_steps %d)' %
-                  (epoch, total_steps))
-            model.save('latest')
+            if total_steps % opt.save_latest_freq == 0:
+                print('saving the latest model (epoch %d, total_steps %d)' %
+                      (epoch, total_steps))
+                model.save('latest')
 
-        iter_data_time = time.time()
+            iter_data_time = time.time()
+
+            pbar.set_postfix(loss=model.loss.item())
+            pbar.update()
     if epoch % opt.save_epoch_freq == 0:
         print('saving the model at the end of epoch %d, iters %d' %
               (epoch, total_steps))

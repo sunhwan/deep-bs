@@ -32,7 +32,7 @@ def get_transform(opt):
     return transforms.Compose(transform_list)
 
 
-def coords_to_grid_np(coords, grid, nx, ny, nz, xmin, ymin, zmin, spacing, rvdw):
+def coords_to_grid_numpy(coords, grid, nx, ny, nz, xmin, ymin, zmin, spacing, rvdw):
     assert grid.shape == (nx, ny, nz)
     ncoords = len(coords)
     X,Y,Z = np.mgrid[xmin:xmin+nx*spacing:spacing, 
