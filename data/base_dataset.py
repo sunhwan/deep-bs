@@ -25,6 +25,8 @@ def get_transform(opt):
         transform_list += [Channel(('C'), opt.grid_size, opt.grid_spacing, opt.rvdw),
                            Channel(('N'), opt.grid_size, opt.grid_spacing, opt.rvdw),
                            Channel(('O'), opt.grid_size, opt.grid_spacing, opt.rvdw)]
+    elif opt.channels == 'test':
+        transform_list += [Empty(opt.grid_size, opt.grid_spacing, opt.rvdw)]
 
     transform_list += [ToTensor()]
     # TODO: Try normalize?
@@ -45,7 +47,7 @@ def coords_to_grid_numpy(coords, grid, nx, ny, nz, xmin, ymin, zmin, spacing, rv
         grid += 1 - np.exp(-(rvdw/r)**12)
     return grid
 
-@numba.jit('f4[:,:,:](f4[:,:], f4[:,:,:], i8, i8, i8, f8, f8, f8, f8, f8)', nopython=True, parallel=True)
+@numba.jit('f4[:,:,:](f4[:,:], f4[:,:,:], i8, i8, i8, f8, f8, f8, f8, f8)', nopython=True, parallel=False)
 def coords_to_grid_numba(coords, grid, nx, ny, nz, xmin, ymin, zmin, spacing, rvdw):
     exps = 0.1
     rmax = 30
@@ -100,6 +102,29 @@ class Channel:
                                     nx, ny, nz, xmin, ymin, zmin, self.spacing, self.rvdw)
         sample['channels'].append(grid)
         return sample
+
+class Empty:
+    """Empty channel for testing purpose
+    
+    Args:
+        size: size of grid in angstrom
+        spacing: grid spacing in angstrom
+        rvdw: r_vdw parameter in grid
+    """
+    def __init__(self, size, spacing, rvdw):
+        self.size = size
+        self.spacing = spacing
+        self.rvdw = rvdw
+    
+    def __call__(self, sample):
+        size = float(self.size)
+        spacing = float(self.spacing)
+        rvdw = float(self.rvdw)
+        nx, ny, nz = [int(size/spacing)+1 for _ in range(3)]
+        grid = np.zeros((nx, ny, nz), dtype=np.float32)
+        sample['channels'].append(grid)
+        return sample
+
 
 class Rotate:
     """Rotate input structure
