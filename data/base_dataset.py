@@ -47,19 +47,19 @@ def coords_to_grid_numpy(coords, grid, nx, ny, nz, xmin, ymin, zmin, spacing, rv
         grid += 1 - np.exp(-(rvdw/r)**12)
     return grid
 
-@numba.jit('f4[:,:,:](f4[:,:], f4[:,:,:], i8, i8, i8, f8, f8, f8, f8, f8)', nopython=True, parallel=False)
+@numba.jit('f4[:,:,:](f4[:,:], f4[:,:,:], i8, i8, i8, f8, f8, f8, f8, f8)', nopython=True)
 def coords_to_grid_numba(coords, grid, nx, ny, nz, xmin, ymin, zmin, spacing, rvdw):
     exps = 0.001
     rmax = 30
     expt = np.exp(-(rvdw/np.arange(0,rmax,exps))**12)
     nc = len(coords)
-    for i in numba.prange(nx):
+    for i in range(nx):
         ix = xmin + i*spacing
-        for j in numba.prange(ny):
+        for j in range(ny):
             iy = ymin + j*spacing
-            for k in numba.prange(nz):
+            for k in range(nz):
                 iz = zmin + k*spacing
-                for l in numba.prange(nc):
+                for l in range(nc):
                     dx = ix - coords[l,0]
                     dy = iy - coords[l,1]
                     dz = iz - coords[l,2]
