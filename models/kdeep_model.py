@@ -61,6 +61,9 @@ class KDeepModel(BaseModel):
         self.backward()
         self.optimizer.step()
 
+    def test(self):
+        self.forward()
+
     def save(self, label):
         self.save_network(self.net, 'KDNet', label, self.gpu_ids)
 

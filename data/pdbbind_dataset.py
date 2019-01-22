@@ -13,6 +13,7 @@ class PdbBindDataset(BaseDataset):
         self.df = pd.read_csv(opt.csvfile)
         self.dataroot = opt.dataroot
         self.transform = get_transform(opt)
+        self.df.affinity = -np.log(self.df.affinity)
         if opt.filter_kd:
             self.df = self.df[self.df.afftype == 'Kd']
     
