@@ -51,6 +51,7 @@ class KDeepModel(BaseModel):
     def backward(self):
         loss = self.criterion(self.preds, self.affinities)
         loss.backward()
+        self.loss = loss
     
     def optimize_parameters(self):
         # forward

@@ -13,7 +13,7 @@ class BaseOptions():
 
     def initialize(self):
         self.parser.add_argument('--dataroot', required=True, help='path to images (should have subfolders trainA, trainB, valA, valB, etc)')
-        self.parser.add_argument('--batchSize', type=int, default=1, help='input batch size')
+        self.parser.add_argument('--batch_size', type=int, default=1, help='input batch size')
         self.parser.add_argument('--csvfile', type=str, default=1, help='csv file')
         self.parser.add_argument('--grid_size', type=float, default=24, help='size of grid')
         self.parser.add_argument('--grid_spacing', type=float, default=1.0, help='spacing of grid')

@@ -21,8 +21,8 @@ for epoch in range(opt.epoch_count, opt.niter + opt.niter_decay + 1):
         iter_start_time = time.time()
         if total_steps % opt.print_freq == 0:
             t_data = iter_start_time - iter_data_time
-        total_steps += opt.batchSize
-        epoch_iter += opt.batchSize
+        total_steps += opt.batch_size
+        epoch_iter += opt.batch_size
         model.set_input(data)
         model.optimize_parameters()
 
@@ -31,7 +31,7 @@ for epoch in range(opt.epoch_count, opt.niter + opt.niter_decay + 1):
 
         if total_steps % opt.print_freq == 0:
             errors = model.get_current_errors()
-            t = (time.time() - iter_start_time) / opt.batchSize
+            t = (time.time() - iter_start_time) / opt.batch_size
 
         if total_steps % opt.save_latest_freq == 0:
             print('saving the latest model (epoch %d, total_steps %d)' %
