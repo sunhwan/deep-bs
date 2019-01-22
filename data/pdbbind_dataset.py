@@ -75,7 +75,10 @@ class GridPDB:
         self.atoms = np.array(self.atoms)
         self.atomtypes = np.array(self.atomtypes)
         self.coords = np.array(self.coords, dtype=np.float32)
-        self.center = np.average(self.coords, axis=0)
+
+    @property
+    def center(self):
+        return np.average(self.coords, axis=0)
     
     def parse_pdb(self):
         self.atoms = []
@@ -97,7 +100,6 @@ class GridPDB:
         self.atoms = np.array(self.atoms)
         self.atomtypes = np.array(self.atomtypes)
         self.coords = np.array(self.coords, dtype=np.float32)
-        self.center = np.average(self.coords, axis=0)
     
     def save_grid(self, filename):
         g = Grid()
