@@ -25,7 +25,13 @@ class KDeepModel(BaseModel):
 
         if self.isTrain:
             self.criterion = torch.nn.MSELoss()
-            self.optimizer = torch.optim.SGD(self.net.parameters(), lr=opt.lr, momentum=opt.momentum)
+            if opt.optimizer == 'sgd':
+                self.optimizer = torch.optim.SGD(self.net.parameters(), lr=opt.lr, momentum=opt.momentum)
+            elif opt.optimizer == 'adam':
+                self.optimizer = torch.optim.Adam(self.net.parameters(),
+                                                  lr=opt.lr, betas=(opt.beta1, 0.999))
+            else:
+                 raise ValueError
             self.optimizers = []
             self.schedulers = []
             self.optimizers.append(self.optimizer)

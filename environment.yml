@@ -1,0 +1,11 @@
+name: 
+channels:
+  - torch
+dependencies:
+  - torch
+  - python=3
+  - numba
+  - pandas
+  - numpy
+  - pip:
+    - tqdm

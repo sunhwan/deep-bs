@@ -522,7 +522,13 @@ class KDeepNetworkGenerator(nn.Module):
                     Fire(384, 64, 256, 256),]
         head = [nn.AdaptiveAvgPool3d((2, 2, 2)),
                 Flatten(),
-                nn.Linear(4096, 1)]
+                nn.BatchNorm1d(4096),
+                nn.Dropout(0.5),
+                nn.Linear(4096, 512),
+                nn.ReLU(inplace=True),
+                nn.BatchNorm1d(512),
+                nn.Dropout(0.5),
+                nn.Linear(512, 1)]
         model = features + head
         self.model = nn.Sequential(*model)
     
