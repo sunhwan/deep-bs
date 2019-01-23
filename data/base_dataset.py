@@ -154,7 +154,7 @@ class Rotate:
 class Center:
     """Center input structure"""
     def __call__(self, sample):
-        com = sample['pocket'].center
+        com = sample['ligand'].center
         sample['pocket'].coords = sample['pocket'].coords - com
         sample['ligand'].coords = sample['ligand'].coords - com
         return sample
