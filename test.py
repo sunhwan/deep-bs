@@ -3,6 +3,7 @@ from options.test_options import TestOptions
 from data.data_loader import CreateDataLoader
 from models.models import create_model
 import numpy as np
+from tqdm import tqdm
 
 opt = TestOptions().parse()
 opt.serial_batches = True  # no shuffle
@@ -12,11 +13,33 @@ data_loader = CreateDataLoader(opt)
 dataset = data_loader.load_data()
 model = create_model(opt)
 
-# test
-for i, data in enumerate(dataset):
-    if i >= opt.how_many: break
-    model.set_input(data)
-    model.test()
-    preds = model.preds.cpu().detach().numpy()
-    print(np.hstack([preds, data['affinity']]))
+def correlation(Measure, Fit):
+    """Calculates the correlation coefficient R^2 between the two sets
+       of Y data provided. Logically, in order for the result to have a sense
+       you want both Y arrays to have been created from the same X array."""
 
+    Mean = np.mean(Measure)
+    s1 = 0
+    s2 = 0
+    Size = np.size(Measure) # identical to np.size(Fit)
+
+    for i in range(0, Size):
+        s1 += (Measure[i] - Fit[i]) ** 2
+        s2 += (Measure[i] - Mean) ** 2
+    Rsquare = 1 - s1/s2
+    return Rsquare
+
+# test
+preds = np.zeros(len(dataset))
+trues = np.zeros(len(dataset))
+with tqdm(total=int(len(dataset)/opt.batch_size)+1) as pbar:
+    for i, data in enumerate(dataset):
+        if i >= opt.how_many: break
+        model.set_input(data)
+        model.test()
+        offset = i * opt.batch_size
+        preds[offset:offset+opt.batch_size] = model.preds.cpu().detach().numpy().flatten()
+        trues[offset:offset+opt.batch_size] = data['affinity'].flatten()
+        pbar.update()
+
+    print(np.corrcoef(preds, trues))

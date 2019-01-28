@@ -4,6 +4,10 @@ def create_model(opt):
     if opt.model == 'kdeep':
         from .kdeep_model import KDeepModel
         model = KDeepModel()
+    elif opt.model == 'mykdeep':
+        from .kdeep_model import KDeepModel
+        model = KDeepModel()
+
     else:
         raise ValueError("Model [%s] not recognized." % opt.model)
     model.initialize(opt)

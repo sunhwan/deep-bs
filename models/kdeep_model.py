@@ -17,7 +17,7 @@ class KDeepModel(BaseModel):
     def initialize(self, opt):
         BaseModel.initialize(self, opt)
 
-        self.net = networks.define_kdeep_net(input_nc=opt.input_nc, gpu_ids=opt.gpu_ids)
+        self.net = networks.define_kdeep_net(input_nc=opt.input_nc, model=opt.model, gpu_ids=opt.gpu_ids, init_type=opt.init_type)
 
         if not self.isTrain or opt.continue_train:
             which_epoch = opt.which_epoch

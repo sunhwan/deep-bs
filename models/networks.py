@@ -4,6 +4,7 @@ from torch.nn import init
 import functools
 from torch.autograd import Variable
 from torch.optim import lr_scheduler
+from torchsummary import summary
 ###############################################################################
 # Functions
 ###############################################################################
@@ -97,7 +98,7 @@ def get_scheduler(optimizer, opt):
         return NotImplementedError('learning rate policy [%s] is not implemented', opt.lr_policy)
     return scheduler
 
-def define_kdeep_net(input_nc, norm='batch', use_dropout=False, init_type='normal', gpu_ids=[]):
+def define_kdeep_net(input_nc, model='kdeep', norm='batch', use_dropout=False, init_type='normal', gpu_ids=[]):
     net = None
     use_gpu = len(gpu_ids) > 0
     norm_layer = get_norm_layer(norm_type=norm)
@@ -105,9 +106,12 @@ def define_kdeep_net(input_nc, norm='batch', use_dropout=False, init_type='norma
     if use_gpu:
         assert(torch.cuda.is_available())
 
-    net = KDeepNetworkGenerator(input_nc, norm_layer=norm_layer, use_dropout=use_dropout, n_blocks=9, gpu_ids=gpu_ids)
-    #else:
-    #    raise NotImplementedError('Generator model name [%s] is not recognized' % which_model_netG)
+    if model == 'kdeep':
+        net = KDeepNetworkGenerator(input_nc, norm_layer=norm_layer, use_dropout=use_dropout, n_blocks=9, gpu_ids=gpu_ids)
+    elif model == 'mykdeep':
+        net = KDeepNetworkGenerator(input_nc, norm_layer=norm_layer, use_dropout=use_dropout, n_blocks=6, gpu_ids=gpu_ids)
+    else:
+        raise NotImplementedError('Generator model name [%s] is not recognized' % which_model_netG)
     if len(gpu_ids) > 0:
         net.cuda(gpu_ids[0])
     init_weights(net, init_type=init_type)
@@ -165,7 +169,8 @@ def print_network(net):
     num_params = 0
     for param in net.parameters():
         num_params += param.numel()
-    print(net)
+    #print(net)
+    print(summary(net, (6, 24, 24, 24)))
     print('Total number of parameters: %d' % num_params)
 
 
@@ -510,24 +515,35 @@ class KDeepNetworkGenerator(nn.Module):
     def __init__(self, input_nc, norm_layer=nn.BatchNorm3d, use_dropout=False, n_blocks=6, gpu_ids=[], padding_type='reflect'):
         super(KDeepNetworkGenerator, self).__init__()
         self.gpu_ids = gpu_ids
-        features = [nn.Conv3d(input_nc, 96, kernel_size=3, stride=2, padding=1),
-                    nn.ReLU(inplace=True),
-                    Fire(96, 16, 64, 64),
-                    Fire(128, 16, 64, 64),
-                    Fire(128, 32, 128, 128),
-                    nn.MaxPool3d(kernel_size=3, stride=2, ceil_mode=True),
-                    Fire(256, 32, 128, 128),
-                    Fire(256, 48, 192, 192),
-                    Fire(384, 48, 192, 192),
-                    Fire(384, 64, 256, 256),]
+        if n_blocks == 9:
+            features = [nn.Conv3d(input_nc, 96, kernel_size=3, stride=2, padding=1),
+                        nn.ReLU(inplace=True),
+                        Fire(96, 16, 64, 64),
+                        Fire(128, 16, 64, 64),
+                        Fire(128, 32, 128, 128),
+                        nn.MaxPool3d(kernel_size=3, stride=2, ceil_mode=True),
+                        Fire(256, 32, 128, 128),
+                        Fire(256, 48, 192, 192),
+                        Fire(384, 48, 192, 192),
+                        Fire(384, 64, 256, 256),]
+        if n_blocks == 6:
+            features = [nn.Conv3d(input_nc, 96, kernel_size=5, stride=2, padding=1),
+                        nn.ReLU(inplace=True),
+                        Fire(96, 16, 64, 64),
+                        Fire(128, 16, 64, 64),
+                        Fire(128, 32, 128, 128),
+                        nn.MaxPool3d(kernel_size=3, stride=2, ceil_mode=True),
+                        Fire(256, 32, 128, 128),
+                        Fire(256, 48, 192, 192),
+                        Fire(384, 48, 192, 192),]
         head = [nn.AdaptiveAvgPool3d((2, 2, 2)),
                 Flatten(),
-                nn.BatchNorm1d(4096),
-                nn.Dropout(0.5),
-                nn.Linear(4096, 512),
+                nn.BatchNorm1d(3072),
+                nn.Dropout(p=0.5),
+                nn.Linear(3072, 512),
                 nn.ReLU(inplace=True),
                 nn.BatchNorm1d(512),
-                nn.Dropout(0.5),
+                nn.Dropout(p=0.5),
                 nn.Linear(512, 1)]
         model = features + head
         self.model = nn.Sequential(*model)
