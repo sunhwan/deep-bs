@@ -7,5 +7,6 @@ dependencies:
   - numba
   - pandas
   - numpy
+  - pytables
   - pip:
     - tqdm
