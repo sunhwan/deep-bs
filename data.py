@@ -12,7 +12,7 @@ class Babel(luigi.Task):
     file_out = luigi.Parameter(default='')
 
     def run(self):
-        os.system(f'babel -i{self.fmt_in} {self.file_in} -o{self.fmt_out} {self.file_out}')
+        os.system(f'babel -i{self.fmt_in} {self.file_in} -o{self.fmt_out} {self.output().path}')
 
     def output(self):
         if self.file_out == '':

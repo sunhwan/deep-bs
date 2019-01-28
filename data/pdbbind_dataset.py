@@ -4,6 +4,7 @@ import sys
 from .griddata import save
 from .griddata.grid import Grid
 from math import exp, sqrt, cos, sin
+from collections import defaultdict
 import numpy as np
 import pandas as pd
 import h5py
@@ -128,6 +129,8 @@ class AtomData:
     def __init__(self):
         self.data = []
         self.adtype_map = {}
+        self.xstype_map = {}
+        self.sminatype_map = {}
         for line in _smina_atom_data.splitlines():
             token = [_.strip() for _ in line[1:-1].strip().split(',')]
             entry = {
@@ -137,12 +140,12 @@ class AtomData:
                 'xs_type': getattr(XSType, token[3][8:]),
                 'smina_name': token[4][1:-1],
                 'autodock_name': token[5][1:-1],
-                'autodock_radius': token[6],
-                'autodock_depth': token[7],
-                'autodock_solvation': token[8],
-                'autodock_volume': token[9],
-                'bond_radius': token[10],
-                'xs_radius': token[11],
+                'autodock_radius': float(token[6]),
+                'autodock_depth': float(token[7]),
+                'autodock_solvation': float(token[8]),
+                'autodock_volume': float(token[9]),
+                'bond_radius': float(token[10]),
+                'xs_radius': float(token[11]),
                 'xs_hydrophobe': token[12] == 'true',
                 'xs_donor': token[13] == 'true',
                 'xs_acceptor': token[14] == 'true',
@@ -150,10 +153,19 @@ class AtomData:
             }
             self.data.append(entry)
             self.adtype_map[entry['autodock_type']] = len(self.data)
+            self.sminatype_map[entry['smina_type']] = len(self.data)
+    
+    def __getitem__(self, index):
+        return self.data[index]
 
-    def query(self, autodock_type):
+    def query_adtype(self, autodock_type):
         return self.adtype_map[getattr(AutoDockType, autodock_type)]
 
+    def query_xstype(self, xs_type):
+        return self.xstype_map[getattr(XSType, xs_type)]
+
+    def query_sminatype(self, smina_type):
+        return self.sminatype_map[getattr(SminaAtomType, smina_type)]
 
 class PdbBindDataset(BaseDataset):
     def initialize(self, opt):
@@ -265,15 +277,96 @@ class GridPDB:
                 y = line[38:46]
                 z = line[46:54]
                 atomtype = line[77:].strip()
+                resname = line[17:20].strip()
+                if resname == 'HOH':
+                    continue
                 self.atoms.append(name)
                 self.atomtypes.append(atomtype)
                 self.coords.append(list(map(float, (x, y, z))))
-                self.atomdata.append(atom_data.query(atomtype))
+                self.atomdata.append(atom_data.query_adtype(atomtype))
                 
+        self.natom = len(self.atoms)
         self.atoms = np.array(self.atoms, dtype='S')
         self.atomtypes = np.array(self.atomtypes, dtype='S')
         self.coords = np.array(self.coords, dtype=np.float32)
         self.atomdata = np.array(self.atomdata, dtype=np.int)
+        self.assign_bonds(atom_data)
+        self.adjust_atom_type(atom_data)
+
+    def assign_bonds(self, atom_data):
+        natom = len(self.atoms)
+        bonds = [set([]) for _ in range(natom)]
+        threshold = 4
+        allowance_factor = 1.1
+        atom_data = AtomData()
+        for i in range(natom):
+            d = np.sum((self.coords - self.coords[i])**2, axis=1) # sqr distance
+            nearby_indices = np.argwhere(d < threshold).flatten()
+            data_i = atom_data[self.atomdata[i]]
+            bond_radius_i = data_i['bond_radius']
+            for j in nearby_indices:
+                if j == i: continue
+                data_j = atom_data[self.atomdata[j]]
+                bond_radius_j = data_j['bond_radius']
+                optimal_bond_distance = bond_radius_i + bond_radius_j
+                bond_distance = sqrt(d[j])
+                if bond_distance < allowance_factor * optimal_bond_distance:
+                    bonds[i].add(j)
+                    bonds[j].add(i)
+        self.bonds = bonds
+    
+    def _is_atom_bonded_to_hetero(self, atom_i, atom_data):
+        neighbors = self.bonds[atom_i]
+        for atom_j in neighbors:
+            data_j = atom_data[self.atomdata[atom_j]]
+            if data_j['xs_heteroatom']: return True
+        return False
+
+    def _is_atom_bonded_to_H(self, atom_i, atom_data):
+        neighbors = self.bonds[atom_i]
+        for atom_j in neighbors:
+            data_j = atom_data[self.atomdata[atom_j]]
+            if data_j['smina_type'] == SminaAtomType.PolarHydrogen: return True
+        return False
+    
+    def adjust_atom_type(self, atom_data):
+        for i in range(self.natom):
+            data_i = atom_data[self.atomdata[i]]
+            if data_i['smina_type'] in (SminaAtomType.AliphaticCarbonXSHydrophobe, SminaAtomType.AliphaticCarbonXSNonHydrophobe):
+                if self._is_atom_bonded_to_hetero(i, atom_data):
+                    self.atomdata[i] = atom_data.query_sminatype('AliphaticCarbonXSNonHydrophobe')
+                else:
+                    self.atomdata[i] = atom_data.query_sminatype('AliphaticCarbonXSHydrophobe')
+            
+            elif data_i['smina_type'] in (SminaAtomType.AromaticCarbonXSHydrophobe, SminaAtomType.AromaticCarbonXSNonHydrophobe):
+                if self._is_atom_bonded_to_hetero(i, atom_data):
+                    self.atomdata[i] = atom_data.query_sminatype('AromaticCarbonXSNonHydrophobe')
+                else:
+                    self.atomdata[i] = atom_data.query_sminatype('AromaticCarbonXSHydrophobe')
+
+            elif data_i['smina_type'] in (SminaAtomType.NitrogenXSDonor, SminaAtomType.Nitrogen):
+                if self._is_atom_bonded_to_H(i, atom_data):
+                    self.atomdata[i] = atom_data.query_sminatype('NitrogenXSDonor')
+                else:
+                    self.atomdata[i] = atom_data.query_sminatype('Nitrogen')
+
+            elif data_i['smina_type'] in (SminaAtomType.NitrogenXSDonorAcceptor, SminaAtomType.NitrogenXSAcceptor):
+                if self._is_atom_bonded_to_H(i, atom_data):
+                    self.atomdata[i] = atom_data.query_sminatype('NitrogenXSDonorAcceptor')
+                else:
+                    self.atomdata[i] = atom_data.query_sminatype('NitrogenXSDonor')
+
+            elif data_i['smina_type'] in (SminaAtomType.OxygenXSDonor, SminaAtomType.Oxygen):
+                if self._is_atom_bonded_to_H(i, atom_data):
+                    self.atomdata[i] = atom_data.query_sminatype('OxygenXSDonor')
+                else:
+                    self.atomdata[i] = atom_data.query_sminatype('Oxygen')
+
+            elif data_i['smina_type'] in (SminaAtomType.OxygenXSDonorAcceptor, SminaAtomType.OxygenXSAcceptor):
+                if self._is_atom_bonded_to_H(i, atom_data):
+                    self.atomdata[i] = atom_data.query_sminatype('OxygenXSDonorAcceptor')
+                else:
+                    self.atomdata[i] = atom_data.query_sminatype('OxygenXSDonor')
 
     def save_grid(self, filename):
         g = Grid()
@@ -285,7 +378,6 @@ class GridPDB:
         griddata.save(g, open(filename, 'w'), format='dx')
 
     def to_h5(self, filename):
-        return
         with h5py.File(filename, "w") as f:
             natoms = len(self.atoms)
             coords = f.create_dataset("coords", (natoms,3), dtype='f4')
