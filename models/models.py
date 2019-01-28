@@ -1,13 +1,12 @@
 def create_model(opt):
     model = None
     print(opt.model)
-    if opt.model == 'kdeep':
+    if opt.model == 'kdeep' or opt.model == 'mykdeep':
         from .kdeep_model import KDeepModel
         model = KDeepModel()
-    elif opt.model == 'mykdeep':
-        from .kdeep_model import KDeepModel
-        model = KDeepModel()
-
+    elif opt.model == 'gnina':
+        from .gnina_model import GninaModel
+        model = GninaModel()
     else:
         raise ValueError("Model [%s] not recognized." % opt.model)
     model.initialize(opt)

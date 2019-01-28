@@ -9,18 +9,18 @@ from .base_model import BaseModel
 from . import networks
 
 
-class KDeepModel(BaseModel):
+class GninaModel(BaseModel):
     def name(self):
-        return 'KDeepModel'
+        return 'GninaModel'
 
     def initialize(self, opt):
         BaseModel.initialize(self, opt)
 
-        self.net = networks.define_kdeep_net(input_nc=opt.input_nc, model=opt.model, gpu_ids=opt.gpu_ids, init_type=opt.init_type)
+        self.net = networks.define_genina_net(input_nc=opt.input_nc, model=opt.model, gpu_ids=opt.gpu_ids, init_type=opt.init_type)
 
         if not self.isTrain or opt.continue_train:
             which_epoch = opt.which_epoch
-            self.load_network(self.net, 'KDNet', which_epoch)
+            self.load_network(self.net, 'GNINA', which_epoch)
 
         if self.isTrain:
             self.criterion = torch.nn.MSELoss()
@@ -70,7 +70,7 @@ class KDeepModel(BaseModel):
         self.forward()
 
     def save(self, label):
-        self.save_network(self.net, 'KDNet', label, self.gpu_ids)
+        self.save_network(self.net, 'GNINA', label, self.gpu_ids)
 
     def load(self, label):
-        self.load_network(self.net, 'KDNet', label)
+        self.load_network(self.net, 'GNINA', label)

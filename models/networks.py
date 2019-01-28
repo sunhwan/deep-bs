@@ -118,51 +118,22 @@ def define_kdeep_net(input_nc, model='kdeep', norm='batch', use_dropout=False, i
     return net
 
 
-def define_G(input_nc, output_nc, ngf, which_model_netG, norm='batch', use_dropout=False, init_type='normal', gpu_ids=[]):
-    netG = None
+def define_gnina_net(input_nc, model='gnina', norm='batch', use_dropout=False, init_type='normal', gpu_ids=[]):
+    net = None
     use_gpu = len(gpu_ids) > 0
     norm_layer = get_norm_layer(norm_type=norm)
 
     if use_gpu:
         assert(torch.cuda.is_available())
 
-    if which_model_netG == 'resnet_9blocks':
-        netG = ResnetGenerator(input_nc, output_nc, ngf, norm_layer=norm_layer, use_dropout=use_dropout, n_blocks=9, gpu_ids=gpu_ids)
-    elif which_model_netG == 'resnet_6blocks':
-        netG = ResnetGenerator(input_nc, output_nc, ngf, norm_layer=norm_layer, use_dropout=use_dropout, n_blocks=6, gpu_ids=gpu_ids)
-    elif which_model_netG == 'unet_128':
-        netG = UnetGenerator(input_nc, output_nc, 7, ngf, norm_layer=norm_layer, use_dropout=use_dropout, gpu_ids=gpu_ids)
-    elif which_model_netG == 'unet_256':
-        netG = UnetGenerator(input_nc, output_nc, 8, ngf, norm_layer=norm_layer, use_dropout=use_dropout, gpu_ids=gpu_ids)
+    if model == 'gnina':
+        net = GninaNetworkGenerator(input_nc, norm_layer=norm_layer, use_dropout=use_dropout, n_blocks=9, gpu_ids=gpu_ids)
     else:
         raise NotImplementedError('Generator model name [%s] is not recognized' % which_model_netG)
     if len(gpu_ids) > 0:
-        netG.cuda(gpu_ids[0])
-    init_weights(netG, init_type=init_type)
-    return netG
-
-
-def define_D(input_nc, ndf, which_model_netD,
-             n_layers_D=3, norm='batch', use_sigmoid=False, init_type='normal', gpu_ids=[]):
-    netD = None
-    use_gpu = len(gpu_ids) > 0
-    norm_layer = get_norm_layer(norm_type=norm)
-
-    if use_gpu:
-        assert(torch.cuda.is_available())
-    if which_model_netD == 'basic':
-        netD = NLayerDiscriminator(input_nc, ndf, n_layers=3, norm_layer=norm_layer, use_sigmoid=use_sigmoid, gpu_ids=gpu_ids)
-    elif which_model_netD == 'n_layers':
-        netD = NLayerDiscriminator(input_nc, ndf, n_layers_D, norm_layer=norm_layer, use_sigmoid=use_sigmoid, gpu_ids=gpu_ids)
-    elif which_model_netD == 'pixel':
-        netD = PixelDiscriminator(input_nc, ndf, norm_layer=norm_layer, use_sigmoid=use_sigmoid, gpu_ids=gpu_ids)
-    else:
-        raise NotImplementedError('Discriminator model name [%s] is not recognized' %
-                                  which_model_netD)
-    if use_gpu:
-        netD.cuda(gpu_ids[0])
-    init_weights(netD, init_type=init_type)
-    return netD
+        net.cuda(gpu_ids[0])
+    init_weights(net, init_type=init_type)
+    return net
 
 
 def print_network(net):
@@ -553,3 +524,34 @@ class KDeepNetworkGenerator(nn.Module):
             return nn.parallel.data_parallel(self.model, input, self.gpu_ids)
         else:
             return self.model(input)
+
+
+class GninaConvBlock(nn.Module):
+    def __init__(self, in_size, in_channel, out_channel):
+        super(Fire, self).__init__()
+        self.pool = nn.AdaptiveMaxPool3d((in_size/2, in_size/2, in_size/2))
+        self.conv = nn.Conv3d(in_channel, out_channel, kernel_size=3, stride=1)
+        self.activation = nn.ReLU(inplace=True)
+
+    def forward(self, x):
+        x = self.conv(self.pool(x))
+        return self.activation(x)
+
+class GninaNetworkGenerator(nn.Module):
+    def __init__(self, input_nc, norm_layer=nn.BatchNorm3d, use_dropout=False, n_blocks=6, gpu_ids=[], padding_type='reflect'):
+        super(GninaNetworkGenerator, self).__init__()
+        self.gpu_ids = gpu_ids
+        features = [GninaConvBlock(48, 35, 32),
+                    GninaConvBlock(24, 32, 64),
+                    GninaConvBlock(12, 64, 128)]
+        head = [Flatten(),
+                nn.Linear(4012, 1)]
+        model = features + head
+        self.model = nn.Sequential(*model)
+    
+    def forward(self, input):
+        if len(self.gpu_ids) and isinstance(input.data, torch.cuda.FloatTensor):
+            return nn.parallel.data_parallel(self.model, input, self.gpu_ids)
+        else:
+            return self.model(input)
+
