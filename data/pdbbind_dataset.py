@@ -132,7 +132,7 @@ class AtomData:
         self.xstype_map = {}
         self.sminatype_map = {}
         for line in _smina_atom_data.splitlines():
-            token = [_.strip() for _ in line[1:-1].strip().split(',')]
+            token = [_.strip() for _ in line.strip()[1:-2].split(',')]
             entry = {
                 'element': getattr(Element, token[1].split('_')[-1]),
                 'smina_type': getattr(SminaAtomType, token[0]),
@@ -151,9 +151,10 @@ class AtomData:
                 'xs_acceptor': token[14] == 'true',
                 'xs_heteroatom': token[15] == 'true',
             }
-            self.data.append(entry)
             self.adtype_map[entry['autodock_type']] = len(self.data)
             self.sminatype_map[entry['smina_type']] = len(self.data)
+            # this should be at the end
+            self.data.append(entry)
     
     def __getitem__(self, index):
         return self.data[index]
@@ -297,7 +298,7 @@ class GridPDB:
         natom = len(self.atoms)
         bonds = [set([]) for _ in range(natom)]
         threshold = 4
-        allowance_factor = 1.1
+        allowance_factor = 1.2
         atom_data = AtomData()
         for i in range(natom):
             d = np.sum((self.coords - self.coords[i])**2, axis=1) # sqr distance
@@ -354,7 +355,7 @@ class GridPDB:
                 if self._is_atom_bonded_to_H(i, atom_data):
                     self.atomdata[i] = atom_data.query_sminatype('NitrogenXSDonorAcceptor')
                 else:
-                    self.atomdata[i] = atom_data.query_sminatype('NitrogenXSDonor')
+                    self.atomdata[i] = atom_data.query_sminatype('NitrogenXSAcceptor')
 
             elif data_i['smina_type'] in (SminaAtomType.OxygenXSDonor, SminaAtomType.Oxygen):
                 if self._is_atom_bonded_to_H(i, atom_data):
@@ -366,7 +367,7 @@ class GridPDB:
                 if self._is_atom_bonded_to_H(i, atom_data):
                     self.atomdata[i] = atom_data.query_sminatype('OxygenXSDonorAcceptor')
                 else:
-                    self.atomdata[i] = atom_data.query_sminatype('OxygenXSDonor')
+                    self.atomdata[i] = atom_data.query_sminatype('OxygenXSAcceptor')
 
     def save_grid(self, filename):
         g = Grid()

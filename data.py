@@ -40,12 +40,16 @@ class ParsePDB(luigi.Task):
 class ParseMol2(luigi.Task):
     ligfile = luigi.Parameter()
     code = luigi.Parameter()
+
+    def requires(self):
+        return Babel(fmt_in='mol2', file_in=self.ligfile, fmt_out='pdbqt')
+
     def run(self):
-        os.system(f'babel -imol2 {self.ligfile} -opdbqt {self.output().path}')
-        lig = GridPDB(self.output().path)
+        lig = GridPDB(self.input().path)
+        lig.to_h5(self.output().path)
 
     def output(self):
-        return luigi.LocalTarget('.'.join(self.ligfile.split('.')[:-1]) + '.pdbqt')
+        return luigi.LocalTarget('.'.join(self.ligfile.split('.')[:-1]) + '.h5')
 
 
 class ExtractCoordinates(luigi.WrapperTask):
