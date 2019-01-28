@@ -16,7 +16,7 @@ class GninaModel(BaseModel):
     def initialize(self, opt):
         BaseModel.initialize(self, opt)
 
-        self.net = networks.define_genina_net(input_nc=opt.input_nc, model=opt.model, gpu_ids=opt.gpu_ids, init_type=opt.init_type)
+        self.net = networks.define_gnina_net(input_nc=opt.input_nc, model=opt.model, gpu_ids=opt.gpu_ids, init_type=opt.init_type)
 
         if not self.isTrain or opt.continue_train:
             which_epoch = opt.which_epoch
@@ -38,7 +38,7 @@ class GninaModel(BaseModel):
                 self.schedulers.append(networks.get_scheduler(optimizer, opt))
 
         print('---------- Networks initialized -------------')
-        networks.print_network(self.net)
+        networks.print_network(self.net, opt)
         print('-----------------------------------------------')
 
     def set_input(self, input):
@@ -59,9 +59,7 @@ class GninaModel(BaseModel):
         self.loss = loss
     
     def optimize_parameters(self):
-        # forward
         self.forward()
-        # G_A and G_B
         self.optimizer.zero_grad()
         self.backward()
         self.optimizer.step()

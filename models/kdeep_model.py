@@ -38,7 +38,7 @@ class KDeepModel(BaseModel):
                 self.schedulers.append(networks.get_scheduler(optimizer, opt))
 
         print('---------- Networks initialized -------------')
-        networks.print_network(self.net)
+        networks.print_network(self.net, opt)
         print('-----------------------------------------------')
 
     def set_input(self, input):

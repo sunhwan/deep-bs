@@ -1,7 +1,7 @@
 def create_model(opt):
     model = None
     print(opt.model)
-    if opt.model == 'kdeep' or opt.model == 'mykdeep':
+    if opt.model == 'kdeep':
         from .kdeep_model import KDeepModel
         model = KDeepModel()
     elif opt.model == 'gnina':

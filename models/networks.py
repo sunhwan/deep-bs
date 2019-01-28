@@ -107,9 +107,7 @@ def define_kdeep_net(input_nc, model='kdeep', norm='batch', use_dropout=False, i
         assert(torch.cuda.is_available())
 
     if model == 'kdeep':
-        net = KDeepNetworkGenerator(input_nc, norm_layer=norm_layer, use_dropout=use_dropout, n_blocks=9, gpu_ids=gpu_ids)
-    elif model == 'mykdeep':
-        net = KDeepNetworkGenerator(input_nc, norm_layer=norm_layer, use_dropout=use_dropout, n_blocks=6, gpu_ids=gpu_ids)
+        net = KDeepNetworkGenerator(input_nc, norm_layer=norm_layer, use_dropout=use_dropout, gpu_ids=gpu_ids)
     else:
         raise NotImplementedError('Generator model name [%s] is not recognized' % which_model_netG)
     if len(gpu_ids) > 0:
@@ -127,7 +125,7 @@ def define_gnina_net(input_nc, model='gnina', norm='batch', use_dropout=False, i
         assert(torch.cuda.is_available())
 
     if model == 'gnina':
-        net = GninaNetworkGenerator(input_nc, norm_layer=norm_layer, use_dropout=use_dropout, n_blocks=9, gpu_ids=gpu_ids)
+        net = GninaNetworkGenerator(input_nc, norm_layer=norm_layer, use_dropout=use_dropout, gpu_ids=gpu_ids)
     else:
         raise NotImplementedError('Generator model name [%s] is not recognized' % which_model_netG)
     if len(gpu_ids) > 0:
@@ -136,7 +134,7 @@ def define_gnina_net(input_nc, model='gnina', norm='batch', use_dropout=False, i
     return net
 
 
-def print_network(net):
+def print_network(net, opt):
     num_params = 0
     for param in net.parameters():
         num_params += param.numel()
@@ -483,39 +481,22 @@ class Flatten(nn.Module):
 
 
 class KDeepNetworkGenerator(nn.Module):
-    def __init__(self, input_nc, norm_layer=nn.BatchNorm3d, use_dropout=False, n_blocks=6, gpu_ids=[], padding_type='reflect'):
+    def __init__(self, input_nc, norm_layer=nn.BatchNorm3d, use_dropout=False, gpu_ids=[], padding_type='reflect'):
         super(KDeepNetworkGenerator, self).__init__()
         self.gpu_ids = gpu_ids
-        if n_blocks == 9:
-            features = [nn.Conv3d(input_nc, 96, kernel_size=3, stride=2, padding=1),
-                        nn.ReLU(inplace=True),
-                        Fire(96, 16, 64, 64),
-                        Fire(128, 16, 64, 64),
-                        Fire(128, 32, 128, 128),
-                        nn.MaxPool3d(kernel_size=3, stride=2, ceil_mode=True),
-                        Fire(256, 32, 128, 128),
-                        Fire(256, 48, 192, 192),
-                        Fire(384, 48, 192, 192),
-                        Fire(384, 64, 256, 256),]
-        if n_blocks == 6:
-            features = [nn.Conv3d(input_nc, 96, kernel_size=5, stride=2, padding=1),
-                        nn.ReLU(inplace=True),
-                        Fire(96, 16, 64, 64),
-                        Fire(128, 16, 64, 64),
-                        Fire(128, 32, 128, 128),
-                        nn.MaxPool3d(kernel_size=3, stride=2, ceil_mode=True),
-                        Fire(256, 32, 128, 128),
-                        Fire(256, 48, 192, 192),
-                        Fire(384, 48, 192, 192),]
+        features = [nn.Conv3d(input_nc, 96, kernel_size=3, stride=2, padding=1),
+                    nn.ReLU(inplace=True),
+                    Fire(96, 16, 64, 64),
+                    Fire(128, 16, 64, 64),
+                    Fire(128, 32, 128, 128),
+                    nn.MaxPool3d(kernel_size=3, stride=2, ceil_mode=True),
+                    Fire(256, 32, 128, 128),
+                    Fire(256, 48, 192, 192),
+                    Fire(384, 48, 192, 192),
+                    Fire(384, 64, 256, 256)]
         head = [nn.AdaptiveAvgPool3d((2, 2, 2)),
                 Flatten(),
-                nn.BatchNorm1d(3072),
-                nn.Dropout(p=0.5),
-                nn.Linear(3072, 512),
-                nn.ReLU(inplace=True),
-                nn.BatchNorm1d(512),
-                nn.Dropout(p=0.5),
-                nn.Linear(512, 1)]
+                nn.Linear(4096, 1)]
         model = features + head
         self.model = nn.Sequential(*model)
     
@@ -526,10 +507,11 @@ class KDeepNetworkGenerator(nn.Module):
             return self.model(input)
 
 
-class GninaConvBlock(nn.Module):
+class GninaBlock(nn.Module):
     def __init__(self, in_size, in_channel, out_channel):
-        super(Fire, self).__init__()
-        self.pool = nn.AdaptiveMaxPool3d((in_size/2, in_size/2, in_size/2))
+        super(GninaBlock, self).__init__()
+        out_size = int(in_size/2)
+        self.pool = nn.AdaptiveMaxPool3d((out_size, out_size, out_size))
         self.conv = nn.Conv3d(in_channel, out_channel, kernel_size=3, stride=1)
         self.activation = nn.ReLU(inplace=True)
 
@@ -541,11 +523,11 @@ class GninaNetworkGenerator(nn.Module):
     def __init__(self, input_nc, norm_layer=nn.BatchNorm3d, use_dropout=False, n_blocks=6, gpu_ids=[], padding_type='reflect'):
         super(GninaNetworkGenerator, self).__init__()
         self.gpu_ids = gpu_ids
-        features = [GninaConvBlock(48, 35, 32),
-                    GninaConvBlock(24, 32, 64),
-                    GninaConvBlock(12, 64, 128)]
+        features = [GninaBlock(48, 35, 32),
+                    GninaBlock(24, 32, 64),
+                    GninaBlock(12, 64, 128)]
         head = [Flatten(),
-                nn.Linear(4012, 1)]
+                nn.Linear(17648, 1)]
         model = features + head
         self.model = nn.Sequential(*model)
     
