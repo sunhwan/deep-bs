@@ -5,7 +5,7 @@ import torchvision.transforms as transforms
 from math import exp, sqrt, cos, sin, e
 import numpy as np
 import numba
-from pdbbind_dataset import AtomData, SminaAtomType, Element
+from .atoms import *
 
 class BaseDataset(data.Dataset):
     def __init__(self):
@@ -164,12 +164,19 @@ class ProteinChannel:
     def __call__(self, sample):
         size = float(self.size)
         spacing = float(self.spacing)
-        rvdw = float(self.rvdw)
+        data = self.atom_data.query(self.atomtype_key, self.atomtype_filter)
+        rvdw = data['autodock_radius']
+        if self.rvdw is not None:
+            rvdw = float(self.rvdw)
         nx, ny, nz = [int(size/spacing)+1 for _ in range(3)]
         xmin, ymin, zmin = [_-size/2 for _ in sample['ligand'].center]
 
         idx = [i for i, data_i in enumerate(sample['pocket'].atomdata) if data_i[self.atom_type_key] == self.atomtype_filter]
         grid = np.zeros((nx, ny, nz), dtype=np.float32)
+        if len(idx) == 0:
+            sample['channels'].append(grid)
+            return sample
+
         if self.method == 'gnina':
             grid = coords_to_grid_gnina(sample['pocket'].coords[idx], grid, 
                                         nx, ny, nz, xmin, ymin, zmin, spacing, rvdw)
@@ -200,12 +207,19 @@ class LigandChannel:
     def __call__(self, sample):
         size = float(self.size)
         spacing = float(self.spacing)
-        rvdw = float(self.rvdw)
+        data = self.atom_data.query(self.atomtype_key, self.atomtype_filter)
+        rvdw = data['autodock_radius']
+        if self.rvdw is not None:
+            rvdw = float(self.rvdw)
         nx, ny, nz = [int(size/spacing)+1 for _ in range(3)]
         xmin, ymin, zmin = [_-size/2 for _ in sample['ligand'].center]
 
         idx = [i for i, data_i in enumerate(sample['pocket'].atomdata) if data_i[self.atom_type_key] == self.atomtype_filter]
         grid = np.zeros((nx, ny, nz), dtype=np.float32)
+        if len(idx) == 0:
+            sample['channels'].append(grid)
+            return sample
+
         if self.method == 'gnina':
             grid = coords_to_grid_gnina(sample['ligand'].coords[idx], grid, 
                                         nx, ny, nz, xmin, ymin, zmin, spacing, rvdw)

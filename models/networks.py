@@ -138,8 +138,9 @@ def print_network(net, opt):
     num_params = 0
     for param in net.parameters():
         num_params += param.numel()
-    #print(net)
-    print(summary(net, (6, 24, 24, 24)))
+    print(net)
+    if opt.channels == 'gnina':
+        print(summary(net, (35, 48, 48, 48)))
     print('Total number of parameters: %d' % num_params)
 
 
@@ -512,7 +513,7 @@ class GninaBlock(nn.Module):
         super(GninaBlock, self).__init__()
         out_size = int(in_size/2)
         self.pool = nn.AdaptiveMaxPool3d((out_size, out_size, out_size))
-        self.conv = nn.Conv3d(in_channel, out_channel, kernel_size=3, stride=1)
+        self.conv = nn.Conv3d(in_channel, out_channel, kernel_size=3, stride=1, padding=1)
         self.activation = nn.ReLU(inplace=True)
 
     def forward(self, x):
@@ -527,7 +528,7 @@ class GninaNetworkGenerator(nn.Module):
                     GninaBlock(24, 32, 64),
                     GninaBlock(12, 64, 128)]
         head = [Flatten(),
-                nn.Linear(17648, 1)]
+                nn.Linear(27648, 1)]
         model = features + head
         self.model = nn.Sequential(*model)
     
