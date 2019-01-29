@@ -13,3 +13,11 @@ To test:
     python test.py --dataroot /home/sunhwan/work/pdbbind/2018/refined-set \
                    --csvfile /home/sunhwan/work/pdbbind/deep/data/test_set.csv \
                    --model kdeep --gpu_ids 3 --batch_size 256 --nThreads 16 
+
+# Preprocess PdbBind dataset
+
+To make reading data faster, use the following command to preprocess PDB/Mol2 files and determine
+Smina atom types prior to training.
+
+    python data.py --dataroot /home/sunhwan/work/pdbbind/2018/refined-set
+    python data.py --dataroot /home/sunhwan/work/pdbbind/2018/other-set

@@ -62,7 +62,6 @@ class ExtractCoordinates(luigi.WrapperTask):
             if os.path.exists(pdbfile):
                 yield ParsePDB(pdbfile=pdbfile, code=code)
                 yield ParseMol2(ligfile=ligfile, code=code)
-            break
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
