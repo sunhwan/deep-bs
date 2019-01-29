@@ -17,6 +17,7 @@ class BaseOptions():
         self.parser.add_argument('--csvfile', type=str, default=1, help='csv file')
         self.parser.add_argument('--grid_size', type=float, default=24, help='size of grid')
         self.parser.add_argument('--grid_spacing', type=float, default=1.0, help='spacing of grid')
+        self.parser.add_argument('--grid_method', default='kdeep', help='grid voxelization method [kdeep|gnina]')
         self.parser.add_argument('--dataset_mode', type=str, default='pdbbind', help='which dataset to use')
         self.parser.add_argument('--input_nc', type=int, default=6, help='# of input image channels')
         self.parser.add_argument('--rotate', type=float, default=90, help='random rotation of dataset')

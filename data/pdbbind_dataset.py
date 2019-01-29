@@ -174,7 +174,7 @@ class PdbBindDataset(BaseDataset):
         self.df = pd.read_csv(opt.csvfile)
         self.dataroot = opt.dataroot
         self.transform = get_transform(opt)
-        self.df.affinity = -np.log(self.df.affinity)
+        self.df.affinity = -np.log10(self.df.affinity)
         if opt.filter_kd:
             self.df = self.df[self.df.afftype == 'Kd']
     
@@ -186,6 +186,21 @@ class PdbBindDataset(BaseDataset):
         pdbfile = '{}/{}/{}_protein.pdb'.format(self.dataroot, row.code, row.code)
         pocketfile = '{}/{}/{}_pocket.pdb'.format(self.dataroot, row.code, row.code)
         ligandfile = '{}/{}/{}_ligand.mol2'.format(self.dataroot, row.code, row.code)
+
+        pocket_pdbqt_file = '{}/{}/{}_pocket.pdbqt'.format(self.dataroot, row.code, row.code)
+        if os.path.exists(pocket_pdbqt_file):
+            pocket = GridPDB(pocket_pdbqt_file)
+        else:
+            raise Error("Please preprocess PDB files")
+            #pocket = GridPDB(pocketfile)
+
+        ligand_pdbqt_file = '{}/{}/{}_ligand.pdbqt'.format(self.dataroot, row.code, row.code)
+        if os.path.exists(ligand_pdbqt_file):
+            ligand = GridPDB(ligand_pdbqt_file)
+        else:
+            raise Error("Please preprocess ligand files")
+            #ligand = GridPDB(ligandfile)
+
         sample = {
             'code': row.code,
             'pdbfile': pdbfile,
@@ -212,7 +227,11 @@ class GridPDB:
             self.parse_mol2()
         if file.endswith('pdbqt'):
             self.pdbqtfile = file
-            self.parse_pdbqt()
+            h5file = file[:-5] + 'h5'
+            if os.path.exists(h5file):
+                self.from_h5()
+            else:
+                self.parse_pdbqt()
         
     def parse_mol2(self):
         self.atoms = []

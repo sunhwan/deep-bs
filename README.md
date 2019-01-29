@@ -1,18 +1,42 @@
 # DEEP BINDING SITE
 
+## KDEEP Model
+
 To train:
 
     python train.py --dataroot /home/sunhwan/work/pdbbind/2018/refined-set \
                     --csvfile /home/sunhwan/work/pdbbind/deep/data/refined_set.csv \
-                    --model keep --gpu_ids 0 --batch_size 256 --nThreads 16 \
-                    --lr 0.0001 --niter 50 --niter_decay 25 \
-                    --channels cno --rvdw 2 --save_epoch_freq 5 --continue_train 
+                    --gpu_ids 0 --batch_size 256 --nThreads 16 \
+                    --lr 0.0001 --niter 50 --niter_decay 25 --save_epoch_freq 5 \
+                    --model kdeep --grid_method kdeep --grid_size 24 --grid_spacing 1.0 \
+                    --channels cno --rvdw 2
 
 To test:
 
     python test.py --dataroot /home/sunhwan/work/pdbbind/2018/refined-set \
                    --csvfile /home/sunhwan/work/pdbbind/deep/data/test_set.csv \
-                   --model kdeep --gpu_ids 3 --batch_size 256 --nThreads 16 
+                   --gpu_ids 0 --batch_size 256 --nThreads 16 \
+                   --model kdeep --grid_method kdeep --grid_size 24 --grid_spacing 1.0 \
+                   --channels cno --rvdw 2
+
+## GNINA Model
+
+To train:
+
+    python train.py --dataroot /home/sunhwan/work/pdbbind/2018/refined-set \
+                    --csvfile /home/sunhwan/work/pdbbind/deep/data/refined_set.csv \
+                    --gpu_ids 0 --batch_size 256 --nThreads 16 \
+                    --lr 0.0001 --niter 50 --niter_decay 25 --save_epoch_freq 5 \
+                    --model gnina --grid_method gnina --grid_size 24 --grid_spacing 0.5 \
+                    --channels gnina
+
+To test:
+
+    python test.py --dataroot /home/sunhwan/work/pdbbind/2018/refined-set \
+                   --csvfile /home/sunhwan/work/pdbbind/deep/data/test_set.csv \
+                   --gpu_ids 0 --batch_size 256 --nThreads 16 \
+                   --model gnina --grid_method gnina --grid_size 24 --grid_spacing 0.5 \
+                   --channels gnina
 
 # Preprocess PdbBind dataset
 
