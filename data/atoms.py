@@ -96,7 +96,7 @@ class AutoDockType:
     Br   = 19;
     METAL = 20;
     B    = 21
-    
+
 class XSType:
     C_H   =  0;
     C_P   =  1;
@@ -127,6 +127,7 @@ class AtomData:
         self.sminatype_map = {}
         for line in _smina_atom_data.splitlines():
             token = [_.strip() for _ in line.strip()[1:-2].split(',')]
+
             entry = {
                 'element': getattr(Element, token[1].split('_')[-1]),
                 'smina_type': getattr(SminaAtomType, token[0]),
@@ -154,6 +155,8 @@ class AtomData:
         return self.data[index]
 
     def query_adtype(self, autodock_type):
+        if autodock_type in ['Na', 'Co', 'Ni', 'Cu', 'K', 'Hg', 'Se', 'Sr', 'Cs', 'Cd']:
+            autodock_type = 'METAL'
         return self.adtype_map[getattr(AutoDockType, autodock_type)]
 
     def query_xstype(self, xs_type):

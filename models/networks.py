@@ -140,7 +140,7 @@ def print_network(net, opt):
         num_params += param.numel()
     print(net)
     if opt.channels == 'gnina':
-        print(summary(net, (35, 48, 48, 48)))
+        print(summary(net, (34, 48, 48, 48)))
     print('Total number of parameters: %d' % num_params)
 
 
@@ -524,7 +524,7 @@ class GninaNetworkGenerator(nn.Module):
     def __init__(self, input_nc, norm_layer=nn.BatchNorm3d, use_dropout=False, n_blocks=6, gpu_ids=[], padding_type='reflect'):
         super(GninaNetworkGenerator, self).__init__()
         self.gpu_ids = gpu_ids
-        features = [GninaBlock(48, 35, 32),
+        features = [GninaBlock(48, 34, 32),
                     GninaBlock(24, 32, 64),
                     GninaBlock(12, 64, 128)]
         head = [Flatten(),

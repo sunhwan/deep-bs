@@ -70,3 +70,4 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     luigi.build([ExtractCoordinates(dataroot=args.dataroot)], workers=args.worker, local_scheduler=True, log_level='INFO')
+

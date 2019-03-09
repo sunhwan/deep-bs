@@ -46,8 +46,8 @@ class PdbBindDataset(BaseDataset):
         sample = {
             'code': row.code,
             'pdbfile': pdbfile,
-            'pocket': GridPDB(pocketfile),
-            'ligand': GridPDB(ligandfile),
+            'pocket': GridPDB(pocket_pdbqt_file),
+            'ligand': GridPDB(ligand_pdbqt_file),
             'channels': [],
             'affinity': row.affinity
         }
@@ -61,6 +61,7 @@ class PdbBindDataset(BaseDataset):
 
 class GridPDB:
     def __init__(self, file):
+        self.filename = file
         if file.endswith('pdb'):
             self.pdbfile = file
             self.parse_pdb()
@@ -249,6 +250,6 @@ class GridPDB:
 
     def from_h5(self, filename):
         with h5py.File(filename, "r") as f:
-            self.coordss = f['coords']
-            self.atomdata = f['atomdata']
+            self.coords = f['coords'][:]
+            self.atomdata = f['atomdata'][:]
 

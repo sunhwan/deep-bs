@@ -119,8 +119,8 @@ def coords_to_grid_numba(coords, grid, nx, ny, nz, xmin, ymin, zmin, spacing, rv
 def coords_to_grid_gnina(coords, grid, nx, ny, nz, xmin, ymin, zmin, spacing, rvdw):
     exps = 0.001
     rmax = 1.5*rvdw
-    expt = []
-    for r in np.arange(0, rvdw, exps):
+    expt = [0.]
+    for r in np.arange(exps, rvdw, exps):
         expt.append(exp(-2*rvdw**2/r**2))
     for r in np.arange(rvdw, rmax, exps):
         expt.append(4/(e**2*rvdw**2)*r**2 -12/(e**2*rvdw)*r + 9/e**2)
@@ -171,7 +171,7 @@ class ProteinChannel:
         nx, ny, nz = [int(size/spacing)+1 for _ in range(3)]
         xmin, ymin, zmin = [_-size/2 for _ in sample['ligand'].center]
 
-        idx = [i for i, data_i in enumerate(sample['pocket'].atomdata) if data_i[self.atom_type_key] == self.atomtype_filter]
+        idx = [i for i, data_i in enumerate(sample['pocket'].atomdata) if self.atom_data[data_i][self.atomtype_key] == self.atomtype_filter]
         grid = np.zeros((nx, ny, nz), dtype=np.float32)
         if len(idx) == 0:
             sample['channels'].append(grid)
@@ -214,7 +214,7 @@ class LigandChannel:
         nx, ny, nz = [int(size/spacing)+1 for _ in range(3)]
         xmin, ymin, zmin = [_-size/2 for _ in sample['ligand'].center]
 
-        idx = [i for i, data_i in enumerate(sample['pocket'].atomdata) if data_i[self.atom_type_key] == self.atomtype_filter]
+        idx = [i for i, data_i in enumerate(sample['ligand'].atomdata) if self.atom_data[data_i][self.atomtype_key] == self.atomtype_filter]
         grid = np.zeros((nx, ny, nz), dtype=np.float32)
         if len(idx) == 0:
             sample['channels'].append(grid)
