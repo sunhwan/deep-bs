@@ -21,10 +21,12 @@ class PdbBindDataset(BaseDataset):
             self.df = self.df[self.df.afftype == 'Kd']
     
     def __len__(self):
-        return len(self.df) * 10
+        #return len(self.df) * 10
+        return len(self.df)
 
     def __getitem__(self, index):
-        row = self.df.iloc[index % len(self.df)]
+        #row = self.df.iloc[index % len(self.df)]
+        row = self.df.iloc[index]
         pdbfile = '{}/{}/{}_protein.pdb'.format(self.dataroot, row.code, row.code)
         pocketfile = '{}/{}/{}_pocket.pdb'.format(self.dataroot, row.code, row.code)
         ligandfile = '{}/{}/{}_ligand.mol2'.format(self.dataroot, row.code, row.code)

@@ -42,4 +42,6 @@ with tqdm(total=int(len(dataset)/opt.batch_size)+1) as pbar:
         trues[offset:offset+opt.batch_size] = data['affinity'].flatten()
         pbar.update()
 
-    print(np.corrcoef(preds, trues))
+    print("corr coef:", np.corrcoef(preds, trues)[0,1])
+    print("R2:", correlation(preds, trues))
+
