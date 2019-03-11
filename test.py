@@ -3,6 +3,7 @@ from options.test_options import TestOptions
 from data.data_loader import CreateDataLoader
 from models.models import create_model
 import numpy as np
+import pandas as pd
 from tqdm import tqdm
 
 opt = TestOptions().parse()
@@ -42,6 +43,9 @@ with tqdm(total=int(len(dataset)/opt.batch_size)+1) as pbar:
         trues[offset:offset+opt.batch_size] = data['affinity'].flatten()
         pbar.update()
 
-    print("corr coef:", np.corrcoef(preds, trues)[0,1])
-    print("R2:", correlation(preds, trues))
+from sklearn.metrics import r2_score
+print("corr coef:", np.corrcoef(preds, trues)[0,1])
+print("R2:", r2_score(trues, preds))
+
+pd.DataFrame(np.vstack((trues, preds)).T, cols=('true', 'pred'), index=False).to_csv('test.csv')
 

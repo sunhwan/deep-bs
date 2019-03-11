@@ -29,6 +29,55 @@ def get_transform(opt):
                            LigandChannel('element', Element.C, opt.grid_size, opt.grid_spacing, opt.grid_method, rvdw=opt.rvdw),
                            LigandChannel('element', Element.N, opt.grid_size, opt.grid_spacing, opt.grid_method, rvdw=opt.rvdw),
                            LigandChannel('element', Element.O, opt.grid_size, opt.grid_spacing, opt.grid_method, rvdw=opt.rvdw)]
+
+    if opt.channels == 'kdeep':
+        hydrophobic_atom_types = ['AliphaticCarbonXSHydrophobe',
+                                  'AliphaticCarbonXSNonHydrophobe',
+                                  'AromaticCarbonXSHydrophobe',
+                                  'AromaticCarbonXSNonHydrophobe']
+        aromatic_atom_types = ['AromaticCarbonXSHydrophobe',
+                               'AromaticCarbonXSNonHydrophobe']
+        hbacceptor_atom_type = ['NitrogenXSAcceptor',
+                                'NitrogenXSDonorAcceptor',
+                                'OxygenXSAcceptor',
+                                'OxygenXSDonorAcceptor',
+                                'SulfurAcceptor']
+        hbdonor_atom_type = ['NitrogenXSDonor',
+                             'NitrogenXSDonorAcceptor',
+                             'OxygenXSDonor',
+                             'OxygenXSDonorAcceptor',
+                             'Sulfur']
+        positive_atom_type = ['Phosphorus',
+                              'Sulfur',
+                              'Nitrogen']
+        negative_atom_type = ['Oxygen',
+                              'SulfurAcceptor']
+        halogen_atom_type = ['Fluorine',
+                             'Chlorine',
+                             'Bromine',
+                             'Iodine']
+        metal_atom_type = ['Zinc',
+                           'GenericMetal',
+                           'Magnesium', 
+                           'Manganese', 
+                           'Calcium', 
+                           'Iron']
+
+        atom_types = ['hydrophobic_atom_types',
+                      'aromatic_atom_types',
+                      'hbacceptor_atom_type',
+                      'hbdonor_atom_type',
+                      'metal_atom_type', 
+                      'positive_atom_type', 
+                      'negative_atom_type', 
+                      'halogen_atom_type']
+        for atom_type in atom_types:
+            sm_type = [getattr(SminaAtomType, _) for _ in locals()[atom_type]]
+            transform_list.append(ProteinChannel('smina_type', sm_type, opt.grid_size, opt.grid_spacing, opt.grid_method))
+        for atom_type in atom_types:
+            sm_type = [getattr(SminaAtomType, _) for _ in locals()[atom_type]]
+            transform_list.append(LigandChannel('smina_type', sm_type, opt.grid_size, opt.grid_spacing, opt.grid_method))
+
     if opt.channels == 'gnina':
         protein_atom_types = ['AliphaticCarbonXSHydrophobe',
                               'AliphaticCarbonXSNonHydrophobe',
@@ -164,25 +213,35 @@ class ProteinChannel:
     def __call__(self, sample):
         size = float(self.size)
         spacing = float(self.spacing)
-        data = self.atom_data.query(self.atomtype_key, self.atomtype_filter)
-        rvdw = data['autodock_radius']
-        if self.rvdw is not None:
-            rvdw = float(self.rvdw)
         nx, ny, nz = [int(size/spacing)+1 for _ in range(3)]
         xmin, ymin, zmin = [_-size/2 for _ in sample['ligand'].center]
 
-        idx = [i for i, data_i in enumerate(sample['pocket'].atomdata) if self.atom_data[data_i][self.atomtype_key] == self.atomtype_filter]
-        grid = np.zeros((nx, ny, nz), dtype=np.float32)
-        if len(idx) == 0:
-            sample['channels'].append(grid)
-            return sample
+        atomtype_filters = self.atomtype_filter
+        if not isinstance(self.atomtype_filter, list):
+             atomtype_filters = [self.atomtype_filter]
 
-        if self.method == 'gnina':
-            grid = coords_to_grid_gnina(sample['pocket'].coords[idx], grid, 
-                                        nx, ny, nz, xmin, ymin, zmin, spacing, rvdw)
-        elif self.method == 'kdeep':
-            grid = coords_to_grid_numba(sample['pocket'].coords[idx], grid, 
-                                        nx, ny, nz, xmin, ymin, zmin, spacing, rvdw)
+        grid = np.zeros((nx, ny, nz), dtype=np.float32)
+        for atomtype_filter in atomtype_filters:
+            data = self.atom_data.query(self.atomtype_key, atomtype_filter)
+            rvdw = data['autodock_radius']
+            if self.rvdw is not None:
+                rvdw = float(self.rvdw)
+
+            if isinstance(self.atomtype_filter, list):
+                idx = [i for i, data_i in enumerate(sample['pocket'].atomdata) if self.atom_data[data_i][self.atomtype_key] in self.atomtype_filter]
+            else:
+                idx = [i for i, data_i in enumerate(sample['pocket'].atomdata) if self.atom_data[data_i][self.atomtype_key] == self.atomtype_filter]
+            if len(idx) == 0:
+                continue
+
+            if self.method == 'gnina':
+                _grid = coords_to_grid_gnina(sample['pocket'].coords[idx], grid, 
+                                             nx, ny, nz, xmin, ymin, zmin, spacing, rvdw)
+            elif self.method == 'kdeep':
+                _grid = coords_to_grid_numba(sample['pocket'].coords[idx], grid, 
+                                             nx, ny, nz, xmin, ymin, zmin, spacing, rvdw)
+            grid += _grid
+
         sample['channels'].append(grid)
         return sample
 
@@ -207,25 +266,35 @@ class LigandChannel:
     def __call__(self, sample):
         size = float(self.size)
         spacing = float(self.spacing)
-        data = self.atom_data.query(self.atomtype_key, self.atomtype_filter)
-        rvdw = data['autodock_radius']
-        if self.rvdw is not None:
-            rvdw = float(self.rvdw)
         nx, ny, nz = [int(size/spacing)+1 for _ in range(3)]
         xmin, ymin, zmin = [_-size/2 for _ in sample['ligand'].center]
 
-        idx = [i for i, data_i in enumerate(sample['ligand'].atomdata) if self.atom_data[data_i][self.atomtype_key] == self.atomtype_filter]
-        grid = np.zeros((nx, ny, nz), dtype=np.float32)
-        if len(idx) == 0:
-            sample['channels'].append(grid)
-            return sample
+        atomtype_filters = self.atomtype_filter
+        if not isinstance(self.atomtype_filter, list):
+             atomtype_filters = [self.atomtype_filter]
 
-        if self.method == 'gnina':
-            grid = coords_to_grid_gnina(sample['ligand'].coords[idx], grid, 
-                                        nx, ny, nz, xmin, ymin, zmin, spacing, rvdw)
-        elif self.method == 'kdeep':
-            grid = coords_to_grid_numba(sample['ligand'].coords[idx], grid, 
-                                        nx, ny, nz, xmin, ymin, zmin, spacing, rvdw)
+        grid = np.zeros((nx, ny, nz), dtype=np.float32)
+        for atomtype_filter in atomtype_filters:
+            data = self.atom_data.query(self.atomtype_key, atomtype_filter)
+            rvdw = data['autodock_radius']
+            if self.rvdw is not None:
+                rvdw = float(self.rvdw)
+
+            if isinstance(self.atomtype_filter, list):
+                idx = [i for i, data_i in enumerate(sample['ligand'].atomdata) if self.atom_data[data_i][self.atomtype_key] in self.atomtype_filter]
+            else:
+                idx = [i for i, data_i in enumerate(sample['ligand'].atomdata) if self.atom_data[data_i][self.atomtype_key] == self.atomtype_filter]
+            if len(idx) == 0:
+                continue
+
+            if self.method == 'gnina':
+                _grid = coords_to_grid_gnina(sample['ligand'].coords[idx], grid, 
+                                             nx, ny, nz, xmin, ymin, zmin, spacing, rvdw)
+            elif self.method == 'kdeep':
+                _grid = coords_to_grid_numba(sample['ligand'].coords[idx], grid, 
+                                             nx, ny, nz, xmin, ymin, zmin, spacing, rvdw)
+            grid += _grid
+
         sample['channels'].append(grid)
         return sample
 
