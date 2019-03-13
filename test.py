@@ -47,5 +47,5 @@ from sklearn.metrics import r2_score
 print("corr coef:", np.corrcoef(preds, trues)[0,1])
 print("R2:", r2_score(trues, preds))
 
-pd.DataFrame(np.vstack((trues, preds)).T, cols=('true', 'pred'), index=False).to_csv('test.csv')
+pd.DataFrame(np.vstack((trues, preds)).T, cols=('true', 'pred')).to_csv('test.csv', index=False)
 

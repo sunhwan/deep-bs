@@ -155,7 +155,7 @@ class AtomData:
         return self.data[index]
 
     def query_adtype(self, autodock_type):
-        if autodock_type in ['Na', 'Co', 'Ni', 'Cu', 'K', 'Hg', 'Se', 'Sr', 'Cs', 'Cd']:
+        if autodock_type in ['Na', 'Co', 'Ni', 'Cu', 'K', 'Hg', 'Se', 'Sr', 'Cs', 'Cd', 'Si']:
             autodock_type = 'METAL'
         return self.adtype_map[getattr(AutoDockType, autodock_type)]
 
