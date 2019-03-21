@@ -52,6 +52,21 @@ class ParseMol2(luigi.Task):
         return luigi.LocalTarget('.'.join(self.ligfile.split('.')[:-1]) + '.h5')
 
 
+class ParseSDF(luigi.Task):
+    ligfile = luigi.Parameter()
+    code = luigi.Parameter()
+
+    def requires(self):
+        return Babel(fmt_in='sdf', file_in=self.ligfile, fmt_out='pdbqt')
+
+    def run(self):
+        lig = GridPDB(self.input().path)
+        lig.to_h5(self.output().path)
+
+    def output(self):
+        return luigi.LocalTarget('.'.join(self.ligfile.split('.')[:-1]) + '.h5')
+
+
 class ExtractCoordinates(luigi.WrapperTask):
     dataroot = luigi.Parameter()
     def requires(self):
@@ -63,11 +78,17 @@ class ExtractCoordinates(luigi.WrapperTask):
                 yield ParsePDB(pdbfile=pdbfile, code=code)
                 yield ParseMol2(ligfile=ligfile, code=code)
 
+            for fn in glob.glob('{}/*_high_*.sdf'.format(pdbdir)):
+                yield ParseSDF(ligfile=fn, code=code)
+            for fn in glob.glob('{}/*_low_*.sdf'.format(pdbdir)):
+                yield ParseSDF(ligfile=fn, code=code)
+                
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--worker', type=int, default=1, help='number of workers')
     parser.add_argument('--dataroot', required=True, default='/home/sunhwan/work/pdbbind/2018/refined-set', help='data directory')
     args = parser.parse_args()
 
-    luigi.build([ExtractCoordinates(dataroot=args.dataroot)], workers=args.worker, local_scheduler=True, log_level='INFO')
+    luigi.build([ExtractCoordinates(dataroot=args.dataroot)], workers=args.worker, local_scheduler=True, log_level='DEBUG')
 

@@ -6,14 +6,17 @@ from .griddata import save
 from .griddata.grid import Grid
 from math import exp, sqrt, cos, sin
 from collections import defaultdict
+from glob import glob
+from random import shuffle
 import numpy as np
 import pandas as pd
 import h5py
 
-class PdbBindDataset(BaseDataset):
+class PdbBindDockedDataset(BaseDataset):
     def initialize(self, opt):
         self.opt = opt
         self.df = pd.read_csv(opt.csvfile)
+        self.df = self.df[self.df.rdkit]
         self.dataroot = opt.dataroot
         self.transform = get_transform(opt)
         self.df.affinity = -np.log10(self.df.affinity)
@@ -21,17 +24,18 @@ class PdbBindDataset(BaseDataset):
             self.df = self.df[self.df.afftype == 'Kd']
     
     def __len__(self):
-        #return len(self.df) * 10
-        return len(self.df)
+        return len(self.df) * 10
 
     def __getitem__(self, index):
-        #row = self.df.iloc[index % len(self.df)]
-        row = self.df.iloc[index]
+        row = self.df.iloc[index % len(self.df)]
+        rowidx = index // len(self.df)
         pdbfile = '{}/{}/{}_protein.pdb'.format(self.dataroot, row.code, row.code)
         pocketfile = '{}/{}/{}_pocket.pdb'.format(self.dataroot, row.code, row.code)
         ligandfile = '{}/{}/{}_ligand.mol2'.format(self.dataroot, row.code, row.code)
 
-        pocket_pdbqt_file = '{}/{}/{}_pocket.pdbqt'.format(self.dataroot, row.code, row.code)
+        #pocket_pdbqt_file = '{}/{}/{}_pocket.pdbqt'.format(self.dataroot, row.code, row.code)
+        refinedset_root = '/home/sunhwan/work/pdbbind/2018/refined-set/'
+        pocket_pdbqt_file = '{}/{}/{}_pocket.pdbqt'.format(refinedset_root, row.code, row.code)
         if os.path.exists(pocket_pdbqt_file):
             pocket = GridPDB(pocket_pdbqt_file)
         else:
@@ -39,6 +43,22 @@ class PdbBindDataset(BaseDataset):
             #pocket = GridPDB(pocketfile)
 
         ligand_pdbqt_file = '{}/{}/{}_ligand.pdbqt'.format(self.dataroot, row.code, row.code)
+        low_rmsd_files = glob('{}/{}/{}_low_*.pdbqt'.format(self.dataroot, row.code, row.code))
+        high_rmsd_files = glob('{}/{}/{}_high_*.pdbqt'.format(self.dataroot, row.code, row.code))
+        if len(high_rmsd_files) == 0:
+            pose = 1
+            shuffle(low_rmsd_files)
+            ligand_pdbqt_file = low_rmsd_files[0]
+        else:
+            if rowidx % 2 == 0:
+                pose = 1
+                shuffle(low_rmsd_files)
+                ligand_pdbqt_file = low_rmsd_files[0]
+            else:
+                pose = 0
+                shuffle(high_rmsd_files)
+                ligand_pdbqt_file = high_rmsd_files[0]
+
         if os.path.exists(ligand_pdbqt_file):
             ligand = GridPDB(ligand_pdbqt_file)
         else:
@@ -51,6 +71,7 @@ class PdbBindDataset(BaseDataset):
             'pocket': GridPDB(pocket_pdbqt_file),
             'ligand': GridPDB(ligand_pdbqt_file),
             'channels': [],
+            'pose': pose,
             'affinity': row.affinity
         }
         if self.transform:
@@ -62,7 +83,7 @@ class PdbBindDataset(BaseDataset):
 
 
 class GridPDB:
-    def __init__(self, file, use_cache=True):
+    def __init__(self, file):
         self.filename = file
         if file.endswith('pdb'):
             self.pdbfile = file
@@ -73,7 +94,7 @@ class GridPDB:
         if file.endswith('pdbqt'):
             self.pdbqtfile = file
             h5file = file[:-5] + 'h5'
-            if os.path.exists(h5file) and use_cache:
+            if os.path.exists(h5file):
                 self.from_h5(h5file)
             else:
                 self.parse_pdbqt()

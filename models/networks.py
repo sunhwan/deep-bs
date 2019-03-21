@@ -126,6 +126,8 @@ def define_gnina_net(input_nc, model='gnina', norm='batch', use_dropout=False, i
 
     if model == 'gnina':
         net = GninaNetworkGenerator(input_nc, norm_layer=norm_layer, use_dropout=use_dropout, gpu_ids=gpu_ids)
+    elif model == 'gnina_pose':
+        net = GninaPoseNetworkGenerator(input_nc, norm_layer=norm_layer, use_dropout=use_dropout, gpu_ids=gpu_ids)
     else:
         raise NotImplementedError('Generator model name [%s] is not recognized' % which_model_netG)
     if len(gpu_ids) > 0:
@@ -531,6 +533,29 @@ class GninaNetworkGenerator(nn.Module):
                 nn.Linear(27648, 1)]
         model = features + head
         self.model = nn.Sequential(*model)
+    
+    def forward(self, input):
+        if len(self.gpu_ids) and isinstance(input.data, torch.cuda.FloatTensor):
+            return nn.parallel.data_parallel(self.model, input, self.gpu_ids)
+        else:
+            return self.model(input)
+
+class GninaPoseNetworkGenerator(nn.Module):
+    def __init__(self, input_nc, norm_layer=nn.BatchNorm3d, use_dropout=False, n_blocks=6, gpu_ids=[], padding_type='reflect'):
+        super(GninaPoseNetworkGenerator, self).__init__()
+        self.gpu_ids = gpu_ids
+        features = [GninaBlock(48, 34, 32),
+                    GninaBlock(24, 32, 64),
+                    GninaBlock(12, 64, 128)]
+        affhead = [Flatten(),
+                   nn.Linear(27648, 1)]
+        posehead = [Flatten(),
+                    nn.Linear(27648, 2),
+                    nn.Softmax()]
+     
+        self.body = nn.Sequential(*features)
+        self.affinity_head = nn.Sequential(*affhead)
+        self.pose_head = nn.Sequential(*posehead)
     
     def forward(self, input):
         if len(self.gpu_ids) and isinstance(input.data, torch.cuda.FloatTensor):

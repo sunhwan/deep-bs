@@ -78,7 +78,7 @@ def get_transform(opt):
             sm_type = [getattr(SminaAtomType, _) for _ in locals()[atom_type]]
             transform_list.append(LigandChannel('smina_type', sm_type, opt.grid_size, opt.grid_spacing, opt.grid_method))
 
-    if opt.channels == 'gnina':
+    elif opt.channels == 'gnina':
         protein_atom_types = ['AliphaticCarbonXSHydrophobe',
                               'AliphaticCarbonXSNonHydrophobe',
                               'AromaticCarbonXSHydrophobe',
@@ -123,7 +123,7 @@ def get_transform(opt):
     elif opt.channels == 'test':
         transform_list += [Empty(opt.grid_size, opt.grid_spacing, opt.rvdw)]
 
-    transform_list += [ToTensor()]
+    transform_list += [ToTensor(opt)]
     # TODO: Try normalize?
     # TODO: Try flip?
     return transforms.Compose(transform_list)
@@ -357,9 +357,19 @@ class Center:
 class ToTensor(object):
     """Convert ndarrays in sample to Tensors."""
 
+    def __init__(self, opt):
+        self.opt = opt
+
     def __call__(self, sample):
         grids = np.vstack([c[np.newaxis,:] for c in sample['channels']])
-        return {
-            'grids': torch.from_numpy(grids),
-            'affinity': torch.from_numpy(np.array([sample['affinity']], dtype=np.float32))
-        }
+        if self.opt.model == 'gnina_pose':
+            return {
+                'grids': torch.from_numpy(grids),
+                'affinity': torch.from_numpy(np.array([sample['affinity']], dtype=np.float32)),
+                'pose': torch.from_numpy(np.array([sample['pose']], dtype=np.float32)),
+            }
+        else:
+            return {
+                'grids': torch.from_numpy(grids),
+                'affinity': torch.from_numpy(np.array([sample['affinity']], dtype=np.float32))
+            }

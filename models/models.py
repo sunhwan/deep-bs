@@ -7,6 +7,9 @@ def create_model(opt):
     elif opt.model == 'gnina':
         from .gnina_model import GninaModel
         model = GninaModel()
+    elif opt.model == 'gnina_pose':
+        from .gnina_model import GninaPoseModel
+        model = GninaPoseModel()
     else:
         raise ValueError("Model [%s] not recognized." % opt.model)
     model.initialize(opt)
