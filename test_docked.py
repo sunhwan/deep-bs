@@ -31,25 +31,21 @@ def correlation(Measure, Fit):
     return Rsquare
 
 # test
-preds_pose = np.zeros(len(dataset))
-trues_pose = np.zeros(len(dataset))
-preds_affinity = np.zeros(len(dataset))
-trues_affinity = np.zeros(len(dataset))
+preds = np.zeros(len(dataset))
+trues = np.zeros(len(dataset))
 with tqdm(total=int(len(dataset)/opt.batch_size)+1) as pbar:
     for i, data in enumerate(dataset):
+        if i >= opt.how_many: break
         model.set_input(data)
         model.test()
         offset = i * opt.batch_size
-        preds_pose[offset:offset+opt.batch_size] = model.preds_pose.cpu().detach().numpy().flatten()
-        trues_pose[offset:offset+opt.batch_size] = data['pose'].flatten()
-        preds_affinity[offset:offset+opt.batch_size] = model.preds_affinity.cpu().detach().numpy().flatten()
-        trues_affinity[offset:offset+opt.batch_size] = data['affinity'].flatten()
+        preds[offset:offset+opt.batch_size] = model.preds.cpu().detach().numpy().flatten()
+        trues[offset:offset+opt.batch_size] = data['affinity'].flatten()
         pbar.update()
 
-#from sklearn.metrics import r2_score
-#print("corr coef:", np.corrcoef(preds, trues)[0,1])
-#print("R2:", r2_score(trues, preds))
+from sklearn.metrics import r2_score
+print("corr coef:", np.corrcoef(preds, trues)[0,1])
+print("R2:", r2_score(trues, preds))
 
-pd.DataFrame(np.vstack((trues_pose, preds_pose)).T, columns=('true', 'pred')).to_csv('output_pose.csv', index=False)
-pd.DataFrame(np.vstack((trues_affinity, preds_affinity)).T, columns=('true', 'pred')).to_csv('output_affinity.csv', index=False)
+pd.DataFrame(np.vstack((trues, preds)).T, cols=('true', 'pred')).to_csv('test.csv', index=False)
 

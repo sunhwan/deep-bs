@@ -7,7 +7,10 @@ def CreateDataset(opt):
     if opt.dataset_mode == 'pdbbind':
         from .pdbbind_dataset import PdbBindDataset
         dataset = PdbBindDataset()
-    if opt.dataset_mode == 'jak2':
+    elif opt.dataset_mode == 'pdbbind_docked':
+        from .pdbbind_docked_dataset import PdbBindDockedDataset
+        dataset = PdbBindDockedDataset()
+    elif opt.dataset_mode == 'jak2':
         from .jak2_dataset import Jak2Dataset
         dataset = Jak2Dataset()
     else:

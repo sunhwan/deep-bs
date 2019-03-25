@@ -5,3 +5,4 @@ __pycache__
 checkpoints
 .DS_Store
 jak2_docked
+output.csv

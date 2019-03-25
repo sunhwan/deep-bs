@@ -50,6 +50,7 @@ class Jak2Dataset(BaseDataset):
             'pocket': GridPDB(pocket_pdbqt_file),
             'ligand': GridPDB(ligand_pdbqt_file),
             'channels': [],
+            'pose': 1,
             'affinity': row.affinity
         }
         if self.transform:
